@@ -7,11 +7,11 @@ import creds
 #time to stop
 _MAX_COUNT = 2000
 
+
 def get_service():
     credentials = creds.get_credentials()
     http = credentials.authorize(httplib2.Http())
     return discovery.build('drive', 'v3', http=http)
-
 
 
 def read_chunk(service, continuation_token):
@@ -19,6 +19,7 @@ def read_chunk(service, continuation_token):
         pageSize=100, pageToken=continuation_token,
         fields="nextPageToken, files(id, name, size, md5Checksum)"
         ).execute()
+
 
 def main():
     """Shows basic usage of the Google Drive API.
@@ -73,7 +74,7 @@ Files without checksum skipped: {2}
           .format(count, len(dups), no_checksum_count))
     print ('\n====\nDUPS: \n')
 
-    #TODO: Eliminate more false positives.
+    #TODO: Eliminate some false positives.
     #TODO: print path in Drive.
     #TODO: always write to file. Separate from log info.
     for dup in dups:
@@ -81,8 +82,6 @@ Files without checksum skipped: {2}
         for item in dup:
             print(u"\t{0}".format(item))
 
-
-
-   
+ 
 if __name__ == '__main__':
     main()
