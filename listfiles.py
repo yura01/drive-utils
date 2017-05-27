@@ -4,9 +4,11 @@ import httplib2
 from apiclient import discovery
 import creds
 
-#time to stop
-_MAX_COUNT = 2000
+# time to stop
+_MAX_COUNT = 1200
 
+# Page size for API list call
+_PAGE_SIZE = 200;
 
 def get_service():
     credentials = creds.get_credentials()
@@ -16,17 +18,13 @@ def get_service():
 
 def read_chunk(service, continuation_token):
     return service.files().list(
-        pageSize=100, pageToken=continuation_token,
+        pageSize=_PAGE_SIZE, pageToken=continuation_token,
         fields="nextPageToken, files(id, name, size, md5Checksum)"
         ).execute()
 
 
 def main():
-    """Shows basic usage of the Google Drive API.
-        
-        Creates a Google Drive API service object and outputs the names and IDs
-        for up to 10 files.
-        """
+    """Reads files from Google Drive API and tries to identify duplicates."""
     verbose = False #TODO: Read from flag
     service = get_service()
     count = 0
