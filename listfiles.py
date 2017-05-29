@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 
 import httplib2
 from apiclient import discovery
@@ -14,7 +15,13 @@ _PAGE_SIZE = 500;
 
 account_name = 'quickstart'
 
-logging.basicConfig(filename='log/drive-utils-listfiles.log', level=logging.DEBUG)
+_LOG_FILENAME='listfiles.log'
+_LOG_FILE_PATH = 'log'
+
+if not os.path.exists(_LOG_FILE_PATH):
+    os.makedirs(_LOG_FILE_PATH)
+
+logging.basicConfig(filename='%s/%s' % (_LOG_FILE_PATH, _LOG_FILENAME), level=logging.DEBUG)
 
 def get_service():
     credentials = creds.get_credentials(account_name)
