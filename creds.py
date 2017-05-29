@@ -10,7 +10,7 @@ try:
 except ImportError:
     flags = None
 
-CREDENTIALS_FILE = 'drive-python-ykyrpach.json'
+CREDENTIALS_TEMPLATE = 'drive-python-{0}.json'
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/drive-python-quickstart.json
@@ -19,11 +19,14 @@ CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Drive API Python Quickstart'
 
 
-def get_credentials():
+def get_credentials(account):
     """Gets valid user credentials from storage.
         
         If nothing has been stored, or if the stored credentials are invalid,
         the OAuth2 flow is completed to obtain the new credentials.
+        
+        Credentials for different are stored in different files named
+        from template "~/.credentials/drive-python-{accountname}.json"
         
         Returns:
         Credentials, the obtained credential.
@@ -32,7 +35,8 @@ def get_credentials():
     credential_dir = os.path.join(home_dir, '.credentials')
     if not os.path.exists(credential_dir):
         os.makedirs(credential_dir)
-    credential_path = os.path.join(credential_dir, CREDENTIALS_FILE)
+    credentials_file = CREDENTIALS_TEMPLATE.format(account)
+    credential_path = os.path.join(credential_dir, credentials_file)
     filesecret_path = os.path.join(credential_dir, CLIENT_SECRET_FILE)
 
     store = Storage(credential_path)
