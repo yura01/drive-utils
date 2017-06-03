@@ -1,8 +1,7 @@
 import unittest
 from unittest import TestCase
-from listfiles import ListFiles
+from listfiles import FileLister
 from listfiles import ItemKey
-
 
 ITEM1 = {
     u'mimeType': u'text/plain',
@@ -67,12 +66,24 @@ ITEM3A = {
     u'size': u'83'
 }
 
+DUP1 = {u'mimeType': u'image/png', u'md5Checksum': u'b230c3fcb55878f9ccbd1751f4306846', u'name': u'factory.png',
+        u'modifiedTime': u'2017-05-22T01:25:39.135Z', u'fullFileExtension': u'png',
+        u'originalFilename': u'factory.png', u'id': u'0BylQJTWU7tFzYkM5bTJEOC1WQWs',
+        u'trashed': False, u'size': u'5014',
+        u'parents': [u'0BylQJTWU7tFzQUpWTUxBdVdPTVk']}
+DUP2 = {u'mimeType': u'image/png', u'md5Checksum': u'b230c3fcb55878f9ccbd1751f4306846', u'name': u'factory.png',
+        u'modifiedTime': u'2017-05-22T01:25:36.313Z', u'fullFileExtension': u'png',
+        u'originalFilename': u'factory.png', u'id': u'0BylQJTWU7tFzVVpmZEhBNlY0dFU',
+        u'trashed': False, u'size': u'5014',
+        u'parents': [u'0AClQJTWU7tFzUk9PVA']}
+
 
 class Test_listfiles(TestCase):
+    # Unit testing
 
     def test_ItemKey_eq(self):
-        ki1 = ItemKey(ITEM1)
-        ki2 = ItemKey(ITEM1A)
+        ki1 = ItemKey(DUP1)
+        ki2 = ItemKey(DUP2)
         self.assertEqual(ki1, ki2)
 
     def test_ItemKey_neq(self):
@@ -85,12 +96,20 @@ class Test_listfiles(TestCase):
         ki2 = ItemKey(ITEM3A)
         self.assertEqual(ki1, ki2)
 
-    def test_ListFiles_path(self):
+    # Integration testing
+
+    def test_FileLister_path(self):
         id = u'0BylQJTWU7tFzRXdHYmV5dEF2azA'
         expected = u'/Stuff/freeciv-server.png'
-        service = ListFiles()
+        service = FileLister()
         actual = service.getPath(id)
         self.assertEqual(expected, actual)
+
+    def test_FileLister_find_dups(self):
+        all_docs = {}
+        items = [DUP1, DUP2]
+        FileLister().insertItems(all_docs, items)
+        self.assertEqual(len(all_docs.keys()), 1)
 
 
 if __name__ == '__main__':
