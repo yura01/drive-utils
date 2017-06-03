@@ -85,8 +85,13 @@ class Test_listfiles(TestCase):
         ki2 = ItemKey(ITEM3A)
         self.assertEqual(ki1, ki2)
 
-    def test_ListFiles_(self):
-        pass
+    def test_ListFiles_path(self):
+        id = u'0BylQJTWU7tFzRXdHYmV5dEF2azA'
+        expected = u'/Stuff/freeciv-server.png'
+        service = ListFiles()
+        actual = service.getPath(id)
+        self.assertEqual(expected, actual)
+
 
 if __name__ == '__main__':
     unittest.main()

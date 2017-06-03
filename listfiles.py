@@ -26,7 +26,9 @@ if not os.path.exists(_LOG_FILE_PATH):
 
 logging.basicConfig(filename='%s/%s' % (_LOG_FILE_PATH, _LOG_FILENAME), level=logging.DEBUG)
 
+
 class ItemKey(object):
+    """Type representing a key generated from the item. Suspected duplicates will have same key."""
     def __init__(self, item):
         self.md5Checksum = item.get('md5Checksum')
         self.name = item.get('name')
@@ -34,28 +36,27 @@ class ItemKey(object):
         self.mimeType = item.get('mimeType')
         self.originalFilename = item.get('originalFilename')
 
-    # def __str__(self):
-    #     return str(self.__dict__)
+    def __str__(self):
+        return str(self.__dict__)
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
+
 class ListFiles(object):
-
-    def __init__(self, service=None):
+    def __init__(self, service=None, account_name="quickstart"):
         """Service: use None for actual drive service, or pass a mock."""
-        self._service  = service
+        self._service = service
         if service == None:
-            self._service = self.get_service()
+            self._service = self.connectToDrive(account_name)
 
-    def connectToDrive(self):
+    def connectToDrive(self, account_name):
         credentials = creds.get_credentials(account_name)
         http = credentials.authorize(httplib2.Http())
         return discovery.build('drive', 'v3', http=http)
 
-
-    def readChunk(self, service, continuation_token):
-        return service.files().list(
+    def readChunk(self, continuation_token):
+        return self._service.files().list(
             pageSize=_PAGE_SIZE, pageToken=continuation_token,
             includeTeamDriveItems=False,
             corpora="user",
@@ -64,41 +65,41 @@ class ListFiles(object):
                    "description, modifiedTime, trashed, parents)"
         ).execute()
 
-
     def getItem(self, id):
         """Finds item by fileId and returns it's name and parent's fileId."""
         return self._service.files().get(fileId=id, fields='parents,name').execute()
-
 
     # TODO: @memoize
     def getPath(self, id):
         """Builds path of the containing folder by the folder's fileId."""
         parents = []
         folder = self.getItem(id)
-        while folder.get('parents') != [id]:
+        while folder.get('parents'):
             parents.insert(0, folder.get('name'))
             parentId = folder.get('parents')[0]
             folder = self.getItem(parentId)
-        return '/'.join(parents)
+        return '/' + '/'.join(parents)
 
     def loadDocs(self):
-        service = self.connectToDrive()
+        """Loads all docs from the drive.
+         
+         :return list of docs.
+         """
         count = 0
         no_key_count = 0
-
         all_docs = {}
 
         # TODO: add meters
         next_page_token = None
         done = False
         while not done:
-            results = self.readChunk(service, next_page_token)
+            results = self.readChunk(next_page_token)
             items = results.get('files', [])
 
             if items:
                 count += len(items)
                 for item in items:
-                    if item['trashed'] or item['mimeType'] == 'application/vnd.google-apps.document':
+                    if not self.need(item):
                         continue
                     logging.debug(u'{0} -> {1}'.format(item['name'], item))
                     key = ItemKey(item)
@@ -114,13 +115,17 @@ class ListFiles(object):
 
         return all_docs, count, no_key_count
 
-
     def findDups(self):
+        """Loads all files from the drive, finds duplicate susptects."""
         all_docs, count, no_key_count = self.loadDocs()
         dups = [all_docs[key] for key in all_docs if len(all_docs[key]) > 1]
 
         logging.info("Finished")
         return dups, count, no_key_count
+
+    def need(self, item):
+        """Returns a boolean whether to keep the item."""
+        return not item['trashed'] and not item['mimeType'] == 'application/vnd.google-apps.document'
 
 
 def printDups():
@@ -143,11 +148,10 @@ Skipped - cannot generate key: {2}
     for dup in dups:
         print(u"found {0} duplicates for {1}".format(len(dup), dup[0]['name']))
         for item in dup:
-            printDup(item)
+            printDup(item, lister.getPath(item['id']))
 
-def printDup(item):
-    path = u"/".join(item['path'])
 
+def printDup(item, path):
     print(u"FILE:{0}\n\tPATH:{1}\n".format(item['name'], path))
 
 
