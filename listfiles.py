@@ -59,14 +59,15 @@ class FileLister(object):
         self._count = 0
         self._no_key_count = 0
         if service == None:
-            self._service = self.connectToDrive(account_name)
+            self._service = self.connect(account_name)
 
-    def connectToDrive(self, account_name):
+    def connect(self, account_name):
+        """Connects to Google Drive."""
         credentials = creds.get_credentials(account_name)
         http = credentials.authorize(httplib2.Http())
         return discovery.build('drive', 'v3', http=http)
 
-    def readChunk(self, continuation_token):
+    def read_chunk(self, continuation_token):
         """Reads a page of from the list results."""
         return self._service.files().list(
             pageSize=_PAGE_SIZE, pageToken=continuation_token,
@@ -77,22 +78,22 @@ class FileLister(object):
                    "description, modifiedTime, trashed, parents)"
         ).execute()
 
-    def getItem(self, id):
+    def get_item(self, id):
         """Finds the item by fileId and returns it's name and parent's fileId."""
         return self._service.files().get(fileId=id, fields='parents,name').execute()
 
     # TODO: @memoize
-    def getPath(self, id):
+    def build_path(self, id):
         """Builds path of the containing folder by the folder's fileId."""
         parents = []
-        folder = self.getItem(id)
+        folder = self.get_item(id)
         while folder.get('parents'):
             parents.insert(0, folder.get('name'))
             parentId = folder.get('parents')[0]
-            folder = self.getItem(parentId)
+            folder = self.get_item(parentId)
         return '/' + '/'.join(parents)
 
-    def loadAllDocs(self):
+    def load_all_files(self):
         """Loads all docs from the drive.
          
         :return dictionary of lists of docs by the keys.
@@ -105,8 +106,8 @@ class FileLister(object):
         next_page_token = None
         done = False
         while not done:
-            results = self.readChunk(next_page_token)
-            self.insertItems(all_docs, results.get('files', []))
+            results = self.read_chunk(next_page_token)
+            self.insert_items(all_docs, results.get('files', []))
             next_page_token = results.get('nextPageToken')
             done = not (next_page_token and self._count < _MAX_COUNT)
         return all_docs
@@ -115,7 +116,7 @@ class FileLister(object):
         """Returns a boolean whether to keep the item."""
         return not item['trashed'] and not item['mimeType'] == 'application/vnd.google-apps.document'
 
-    def insertItems(self, all_docs, items):
+    def insert_items(self, all_docs, items):
         if not items:
             logging.debug(u'No more items.')
             return
@@ -123,7 +124,7 @@ class FileLister(object):
         self._count += len(items)
         for item in items:
             if not self.need(item):
-                logging.debug(u'Don\'t need: {0} -> {1}'.format(item['name'], item))
+                logging.debug(u'Ignoring: {0} -> {1}'.format(item['name'], item))
                 continue
             logging.debug(u'{0} -> {1}'.format(item['name'], item))
             key = ItemKey(item)
@@ -135,14 +136,14 @@ class FileLister(object):
             else:
                 self._no_key_count += 1
 
-    def findDups(self, all_docs):
+    def find_dups(self, all_docs):
         """Loads all files from the drive, finds duplicate susptects."""
         logging.info(u'Started findDups')
         dups = [all_docs[key] for key in all_docs if len(all_docs[key]) > 1]
         logging.info(u'Done findDups')
         return dups
 
-    def getReport(self):
+    def get_report(self):
         fmt = """
 ===============
 Finished. Processed files: {0}
@@ -156,20 +157,21 @@ DUPS:
 {3}
 =====
 """
-        dups = self.findDups(self.loadAllDocs())
+        all_dups = self.find_dups(self.load_all_files())
         report_lines = ""
-        for dup in dups:
-            print(u"found {0} duplicates for {1}".format(len(dup), dup[0]['name']))
-            for item in dup:
-                path = self.getPath(item['id'])
-                report_lines += u"FILE:{0}\n\tPATH:{1}\n".format(item['name'], path)
-        return fmt.format(self._count, len(dups), self._no_key_count, report_lines)
+        for file_dups in all_dups:
+            name = file_dups[0]['name']
+            print(u'found {0} duplicates for {1}'.format(len(file_dups), name))
+            report_lines += u'** {0}\n'.format(name)
+            for item in file_dups:
+                path = self.build_path(item['id'])
+                report_lines += u'\t{0}\n'.format(path)
+        return fmt.format(self._count, len(all_dups), self._no_key_count, report_lines)
 
 
 def main():
     """Reads files from Google Drive API and tries to identify duplicates."""
-    print
-    FileLister(None).getReport()
+    print(FileLister(None).get_report())
 
 
 if __name__ == '__main__':

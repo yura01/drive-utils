@@ -102,13 +102,13 @@ class Test_listfiles(TestCase):
         id = u'0BylQJTWU7tFzRXdHYmV5dEF2azA'
         expected = u'/Stuff/freeciv-server.png'
         service = FileLister()
-        actual = service.getPath(id)
+        actual = service.build_path(id)
         self.assertEqual(expected, actual)
 
     def test_FileLister_find_dups(self):
         all_docs = {}
         items = [DUP1, DUP2]
-        FileLister().insertItems(all_docs, items)
+        FileLister().insert_items(all_docs, items)
         self.assertEqual(len(all_docs.keys()), 1)
 
 
