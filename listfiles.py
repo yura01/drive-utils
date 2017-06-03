@@ -5,6 +5,7 @@ import httplib2
 from apiclient import discovery
 import argparse
 import logging
+from functools import wraps
 
 import creds
 
@@ -25,6 +26,18 @@ if not os.path.exists(_LOG_FILE_PATH):
     os.makedirs(_LOG_FILE_PATH)
 
 logging.basicConfig(filename='%s/%s' % (_LOG_FILE_PATH, _LOG_FILENAME), level=logging.DEBUG)
+
+
+def memoize(func):
+    cache = {}
+
+    @wraps(func)
+    def wrap(*args):
+        if args not in cache:
+            cache[args] = func(*args)
+        return cache[args]
+
+    return wrap
 
 
 class ItemKey(object):
@@ -82,7 +95,7 @@ class FileLister(object):
         """Finds the item by fileId and returns it's name and parent's fileId."""
         return self._service.files().get(fileId=id, fields='parents,name').execute()
 
-    # TODO: @memoize
+    @memoize
     def build_path(self, id):
         """Builds path of the containing folder by the folder's fileId."""
         parents = []
