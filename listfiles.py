@@ -3,13 +3,10 @@ from __future__ import print_function
 import os
 import httplib2
 from apiclient import discovery
-import argparse
 import logging
 from functools import wraps
 
 import creds
-
-flags = argparse.ArgumentParser().parse_args()
 
 # time to stop
 _MAX_COUNT = 10000
@@ -184,7 +181,12 @@ DUPS:
 
 def main():
     """Reads files from Google Drive API and tries to identify duplicates."""
-    print(FileLister(None).get_report())
+    report = FileLister(None).get_report()
+    print(report)
+
+    file = open("out.lst", 'w')
+    file.write(report)
+    file.close()
 
 
 if __name__ == '__main__':
