@@ -2,6 +2,10 @@ import unittest
 from unittest import TestCase
 from listfiles import FileLister
 from listfiles import ItemKey
+from mock import patch
+from googleapiclient.discovery import Resource
+
+from mock import MagicMock
 
 ITEM1 = {
     u'mimeType': u'text/plain',
@@ -78,6 +82,7 @@ DUP2 = {u'mimeType': u'image/png', u'md5Checksum': u'b230c3fcb55878f9ccbd1751f43
         u'parents': [u'0AClQJTWU7tFzUk9PVA']}
 
 
+
 class Test_listfiles(TestCase):
     # Unit testing
 
@@ -99,10 +104,11 @@ class Test_listfiles(TestCase):
     # Integration testing
 
     def test_FileLister_path(self):
+        import pdb; pdb.set_trace()
         id = u'0BylQJTWU7tFzRXdHYmV5dEF2azA'
-        expected = u'/Stuff/freeciv-server.png'
-        service = FileLister()
-        actual = service.build_path(id)
+        expected = u'/My Drive/Stuff/freeciv-server.png'
+        lister = FileLister()
+        actual = lister.build_path(id)
         self.assertEqual(expected, actual)
 
     def test_FileLister_find_dups(self):
@@ -110,6 +116,7 @@ class Test_listfiles(TestCase):
         items = [DUP1, DUP2]
         FileLister().insert_items(all_docs, items)
         self.assertEqual(len(all_docs.keys()), 1)
+
 
 
 if __name__ == '__main__':

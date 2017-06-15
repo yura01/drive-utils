@@ -6,6 +6,7 @@ from apiclient import discovery
 import logging
 from functools import wraps
 
+
 import creds
 
 # time to stop
@@ -13,8 +14,6 @@ _MAX_COUNT = 10000
 
 # Page size for API list call
 _PAGE_SIZE = 500;
-
-account_name = 'quickstart'
 
 _LOG_FILENAME = 'listfiles.log'
 _LOG_FILE_PATH = 'log'
@@ -92,16 +91,17 @@ class FileLister(object):
         """Finds the item by fileId and returns it's name and parent's fileId."""
         return self._service.files().get(fileId=id, fields='parents,name').execute()
 
+
     @memoize
     def build_path(self, id):
         """Builds path of the containing folder by the folder's fileId."""
         parents = []
         folder = self.get_item(id)
-        while folder.get('parents'):
-            parents.insert(0, folder.get('name'))
+        path = ''
+        if folder.get('parents'):
             parentId = folder.get('parents')[0]
-            folder = self.get_item(parentId)
-        return '/' + '/'.join(parents)
+            path = self.build_path(parentId)
+        return '{0}/{1}'.format(path, folder.get('name'))
 
     def load_all_files(self):
         """Loads all docs from the drive.
@@ -173,15 +173,26 @@ DUPS:
             name = file_dups[0]['name']
             print(u'found {0} duplicates for {1}'.format(len(file_dups), name))
             report_lines += u'** {0}\n'.format(name)
+            # read paths until the first exception which is probably out of quota.
+            # TODO: verify the exception, if quota - deal gracefully.
+            # Save memoize cache maybe?
+            need_path = True
             for item in file_dups:
-                path = self.build_path(item['id'])
-                report_lines += u'\t{0}\n'.format(path)
+                if need_path:
+                    try:
+                        path = self.build_path(item['id'])
+                    except Exception:
+                        logging.error("Failed to read path, interrupting path detection")
+                        need_path = False
+                    report_lines += u'\t{0}\n'.format(path)
+                else:
+                    path = "???"
         return fmt.format(self._count, len(all_dups), self._no_key_count, report_lines)
 
 
 def main():
     """Reads files from Google Drive API and tries to identify duplicates."""
-    report = FileLister(None).get_report()
+    report = FileLister(account_name='myaccount').get_report()
     print(report)
 
     file = open("out.lst", 'w')
